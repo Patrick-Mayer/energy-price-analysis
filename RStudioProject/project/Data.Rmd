@@ -1,0 +1,19 @@
+---
+title: "Data.rmd"
+output: html_document
+date: "2026-03-30"
+---
+
+```{r setup, include=FALSE}
+#https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&data[1]=sales&start=2020-01&end=2025-12&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000
+
+#needed cause trying to download everything at once doesn't work, so we have to split it up into multiple files.
+for (year in 2018:2025) {
+  linkTemplate = "https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&data[1]=sales&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=gZv331F0xrjrk5bsB2nw0Y4ldiBDmnsTJXYUSMrY";
+  
+  downloadString = paste0(linkTemplate, "&start=", year, "-01", "&end=", year, "-12");
+  download.file(downloadString, paste0("electricity_data_", year, ".json"));
+}
+```
+
+
