@@ -8,12 +8,35 @@ date: "2026-03-30"
 #https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&data[1]=sales&start=2020-01&end=2025-12&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000
 
 #needed cause trying to download everything at once doesn't work, so we have to split it up into multiple files.
-for (year in 2018:2025) {
-  linkTemplate = "https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&data[1]=sales&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=gZv331F0xrjrk5bsB2nw0Y4ldiBDmnsTJXYUSMrY";
+#for (year in 2018:2025) {
+  #linkTemplate = "https://api.eia.gov/v2/electricity/retail-sales/data/?frequency=monthly&data[0]=price&data[1]=sales&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000&api_key=gZv331F0xrjrk5bsB2nw0Y4ldiBDmnsTJXYUSMrY";
   
-  downloadString = paste0(linkTemplate, "&start=", year, "-01", "&end=", year, "-12");
-  download.file(downloadString, paste0("electricity_data_", year, ".json"));
-}
+  #downloadString = paste0(linkTemplate, "&start=", year, "-01", "&end=", year, "-12");
+  #download.file(downloadString, paste0("electricity_data_", year, ".json"));
+#}
+
+#all we need is period, stateid (filter out entries that are not "ALL"), price, sales, price-units, sales-units
+
+#parse each JSON, write data back as one .csv
+files = list.files(pattern = "\\.json$");
+files;
+
+library(jsonlite);
+library(dplyr);
+
+
+#test = fromJSON(files[1], flatten = TRUE)
+#str(test)
+
+#this is weird lambda syntax for combining all data files
+data = files %>% 
+  lapply(function(f) {
+    json = fromJSON(f, flatten = TRUE)
+    json$response$data
+  }) %>%
+  bind_rows();
+
+data;
+
+#next time, remove unnecessary columns, then serialize data frame into .csv
 ```
-
-
