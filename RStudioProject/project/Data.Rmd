@@ -36,7 +36,29 @@ data = files %>%
   }) %>%
   bind_rows();
 
-data;
+#data;
+
+#fix NAs, convert char of price to float
+relevantData = data %>% 
+  select(period, stateid, sectorid, price, sales, "price-units", "sales-units") %>%
+  filter(sectorid == "ALL", !is.na(price), !is.na(sales)) %>%
+  mutate(price = as.numeric(price));
+
+relevantData;
+
+#2 of our columns seem to be useless. Confirming that they are all the same value
+print(nrow(relevantData));
+tempPriceUnit = relevantData %>% filter(`price-units` == "cents per kilowatt-hour");
+print(nrow(tempPriceUnit));
+tempSalesUnit = relevantData %>% filter(`sales-units` == "million kilowatt hours");
+print(nrow(tempSalesUnit));
+
+#all 3 print 5952, which means we can always assume that price-units is "cents per kilowatt-hour" and sales-units is "million kilowatt hours" 
+
+leanData = relevantData %>% select(period, stateid, price, sales);
+leanData;
+
+write.csv(leanData,"CleanedData.csv", row.names = FALSE);
 
 #next time, remove unnecessary columns, then serialize data frame into .csv
 ```
