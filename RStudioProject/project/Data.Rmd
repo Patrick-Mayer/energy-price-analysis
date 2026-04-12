@@ -55,10 +55,18 @@ print(nrow(tempSalesUnit));
 
 #all 3 print 5952, which means we can always assume that price-units is "cents per kilowatt-hour" and sales-units is "million kilowatt hours" 
 
-leanData = relevantData %>% select(period, stateid, price, sales);
+leanData = relevantData %>% select(period, stateid, price, sales) %>% filter(nchar(stateid) == 2);
 leanData;
+
+
 
 write.csv(leanData,"CleanedData.csv", row.names = FALSE);
 
-#next time, remove unnecessary columns, then serialize data frame into .csv
+#only the most recent data, Dec 2025, and filter out WashingtonDC and the entire US
+leanDec2025Data = leanData %>% filter(startsWith(period, "2025-12") & (stateid != "DC") & (stateid != "US"));
+leanDec2025Data;
+
+write.csv(leanDec2025Data,"RecentCleanedData.csv", row.names = FALSE);
+
+#next step is to use python to generate heatmaps
 ```
