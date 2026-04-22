@@ -1,0 +1,150 @@
+---
+title: "IM3_clean"
+output: html_document
+date: "2026-04-11"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+```
+
+```{r}
+IM3_atlas_orig = read_csv("../data/im3_open_source_data_center_atlas.csv")
+summary(IM3_atlas_orig)
+```
+
+We only want data center buildings, not campuses.  Per the data source:
+
+Data center points, buildings, and campus areas are provided as separate layers in the downloadable data package. Note that data items are not necessarily complete across layers. That is, a specific data center may only be present as a single point geometry in the "point" layer while other data centers are represented in both the campus and building layers.
+
+In some cases, data center campuses and/or buildings straddle a county boundary line. Mappings to both counties are retained in the database as separate rows. These data rows will have the same data center id information, but each will have different county information.
+
+```{r}
+# remove data centers with duplicate IDs
+IM3_atlas = distinct(IM3_atlas_orig, id, .keep_all = TRUE)
+IM3_atlas # this removed 2 rows
+```
+
+```{r}
+setdiff(IM3_atlas_orig, IM3_atlas)
+```
+
+Look at the duplicate data centers to make sure none cross state borders.  If they do, I will have to make sure the new state they are counted in makes sense
+
+```{r}
+duplicate_ids = setdiff(IM3_atlas_orig, IM3_atlas)[["id"]]
+IM3_atlas_orig %>%
+  filter(id %in% duplicate_ids)
+```
+
+All duplicate IDs in this dataset are from county boundaries, not state boundaries, so we can safely remove the duplicate entries because we are doing a state-level analysis.
+
+Next, look for problematic missing values, like state and building area
+
+```{r}
+IM3_atlas %>%
+  group_by(state_abb) %>%
+  count()
+```
+
+No missing states
+
+Next, drop "campus" entries.  We only want to analyze actual buildings.
+
+```{r}
+IM3_atlas = IM3_atlas %>%
+  filter(type != "campus")
+IM3_atlas
+```
+
+```{r}
+summary(IM3_atlas %>% select(sqft, lat, lon))
+```
+
+```{r}
+IM3_atlas %>%
+  filter(is.na(sqft) | sqft <= 0)
+```
+
+91 rows (8% of dataset) have missing square foot information.  To resolve this, we will impute the values with the median datacenter size for the state the data center is in.
+
+```{r}
+national_median = median(IM3_atlas[["sqft"]], na.rm=TRUE)
+datacenter_medians = IM3_atlas %>%
+  filter(sqft >= 0) %>%
+  group_by(state_abb) %>%
+  summarize(med_sqft = median(sqft, na.rm=TRUE), count=n())
+```
+
+```{r}
+national_median
+datacenter_medians
+```
+
+Some states have very few datacenters.  We don't have enough datacenters to impute these, so instead we use the national median
+
+```{r}
+datacenter_medians = datacenter_medians %>%
+  mutate(med_sqft = if_else(
+    count < 10,
+    national_median,
+    med_sqft
+  ))
+```
+
+Now, impute the missing sqft values
+
+
+```{r}
+IM3_atlas = IM3_atlas %>%
+  left_join(datacenter_medians) %>%
+  mutate(sqft = if_else(
+    is.na(sqft),
+    med_sqft,
+    sqft
+  )) %>%
+  mutate(sqft = if_else(
+    is.na(sqft),
+    national_median,
+    sqft
+  )) %>%
+  select(!c("med_sqft", "count", "state_id", "state", "county_id", "county"))
+```
+
+
+```{r}
+IM3_atlas %>%
+  filter(is.na(sqft))
+```
+
+
+With this initial stage of data cleaning done, we begin the LLM-assisted anomoly detection and cleaning
+
+The LLM suggested we take a closer look at the smallest datacenters, as their sizes are unrealistic:
+
+```{r}
+IM3_atlas %>%
+  arrange(desc(sqft))
+```
+
+# not datacenter:
+# 1296723872, 0358946546
+After exploring a few of these on the map, we saw power transformers, equipment sheds, computer stores all mislabeled.  We decided to get rid of entries smaller than 10k sqft
+
+```{r}
+IM3_atlas = IM3_atlas %>%
+  filter(sqft > 10000)
+```
+
+```{r}
+IM3_atlas
+```
+
+```{r}
+IM3_atlas %>%
+  group_by(state_abb) %>%
+  summarize(total_sqft = sum(sqft)) %>%
+  arrange(total_sqft)
+```
+
+
