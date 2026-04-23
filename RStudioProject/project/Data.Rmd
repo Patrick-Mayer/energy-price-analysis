@@ -24,6 +24,7 @@ files;
 library(jsonlite);
 library(dplyr);
 library(ggplot2);
+library(scales);
 
 
 #test = fromJSON(files[1], flatten = TRUE)
@@ -76,7 +77,7 @@ priceDifferenceDataEnd = leanData %>% filter(startsWith(period, "2025-12") & (st
 #totalPriceDifference = priceDifferenceDataStart %>% 
 
 #rename both columns to price_difference
-priceDifferenceDataStart <- leanData %>%
+priceDifferenceDataStart = leanData %>%
   filter(startsWith(period, "2022-01") & (stateid != "DC") & (stateid != "US")) %>%
   select(stateid, price) %>%
   rename(price_difference = price);
@@ -93,11 +94,35 @@ priceDifferenceMinimal = totalPriceDifference %>% select(stateid, price_differen
 write.csv(priceDifferenceMinimal,"PriceDifference.csv", row.names = FALSE);
 
 cleanedDatacenters = read.csv("CleanedDatacenters.csv");
+cleanedDatacenters = cleanedDatacenters %>% rename(stateid = state_abb) %>% 
+  filter((stateid != "DC") & (stateid != "US") & (stateid != "PR")); #Don't forget Puerto Rico
+cleanedDatacenters = cleanedDatacenters %>% full_join(priceDifferenceMinimal, by="stateid");
+
+sqftStates = cleanedDatacenters %>%
+  group_by(stateid) %>%
+  summarize(
+    total_sqft = sum(sqft, na.rm=TRUE),
+    price_difference = first(price_difference),
+  );
+
+ggplot(data=sqftStates) + geom_point(aes(x=total_sqft, y=price_difference, color=stateid))  +
+  #this is an alternative to dividing each value by 1,000,000
+  scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) + 
+  scale_y_continuous(labels = label_number(accuracy=0.01)) + #2 decimals
+  labs(
+    title = "Datacenter Square Footage vs Price Difference (JAN 2022 to DEC 2025)",
+    x = "Total Square Footage (Millions)",
+    y = "Price Difference ($)"
+  );
+ggsave("Sqft_vs_PriceDifference_Scatterplot.png", width = 8, height = 6, dpi = 300);
+
+
 
 #now that you have the .csv, you need to do these steps
   #1. Add the price_difference data csv file to the cleanedDatacenters dataframe. This will probably be
       #a full join. Make sure each row has a price_difference corresponding to the stateid.
-  #2. Make the scatterplot. You may need to save it to an image since RStudio's being weird about dispalying it.
+  #2. Sum the number of sqft of datacenters  for each state. You should have 50 rows.
+  #3. Make the scatterplot. You may need to save it to an image since RStudio's being weird about dispalying it.
 
 
 
