@@ -105,6 +105,8 @@ sqftStates = cleanedDatacenters %>%
     price_difference = first(price_difference),
   );
 
+write.csv(sqftStates,"SqftStates.csv", row.names = FALSE);
+
 ggplot(data=sqftStates) + geom_point(aes(x=total_sqft, y=price_difference, color=stateid))  +
   #this is an alternative to dividing each value by 1,000,000
   scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) + 
