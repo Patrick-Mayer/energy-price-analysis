@@ -60,13 +60,34 @@ leanData;
 
 
 
-write.csv(leanData,"CleanedData.csv", row.names = FALSE);
+#write.csv(leanData,"CleanedData.csv", row.names = FALSE);
 
 #only the most recent data, Dec 2025, and filter out WashingtonDC and the entire US
 leanDec2025Data = leanData %>% filter(startsWith(period, "2025-12") & (stateid != "DC") & (stateid != "US"));
 leanDec2025Data;
 
-write.csv(leanDec2025Data,"RecentCleanedData.csv", row.names = FALSE);
+#write.csv(leanDec2025Data,"RecentCleanedData.csv", row.names = FALSE);
 
-#next step is to use python to generate heatmaps
+priceDifferenceDataStart = leanData %>% filter(startsWith(period, "2020-01") & (stateid != "DC") & (stateid != "US"));
+
+priceDifferenceDataEnd = leanData %>% filter(startsWith(period, "2025-12") & (stateid != "DC") & (stateid != "US"));
+#names(priceDifferenceDataEnd)[names(priceDifferenceDataEnd) == "price"] = "price_difference";
+#totalPriceDifference = priceDifferenceDataStart %>% 
+
+#rename both columns to price_difference
+priceDifferenceDataStart <- leanData %>%
+  filter(startsWith(period, "2022-01") & (stateid != "DC") & (stateid != "US")) %>%
+  select(stateid, price) %>%
+  rename(price_difference = price);
+
+priceDifferenceDataEnd = leanData %>%
+  filter(startsWith(period, "2025-12") & (stateid != "DC") & (stateid != "US"));
+
+#join on state, mutate difference to be end / start
+totalPriceDifference = priceDifferenceDataStart %>%
+  full_join(priceDifferenceDataEnd, by="stateid") %>%
+  mutate(price_difference = price - price_difference);
+
+priceDifferenceMinimal = totalPriceDifference %>% select(stateid, price_difference);
+write.csv(priceDifferenceMinimal,"PriceDifference.csv", row.names = FALSE);
 ```
