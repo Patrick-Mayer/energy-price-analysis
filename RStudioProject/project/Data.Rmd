@@ -23,6 +23,7 @@ files;
 
 library(jsonlite);
 library(dplyr);
+library(ggplot2);
 
 
 #test = fromJSON(files[1], flatten = TRUE)
@@ -90,4 +91,16 @@ totalPriceDifference = priceDifferenceDataStart %>%
 
 priceDifferenceMinimal = totalPriceDifference %>% select(stateid, price_difference);
 write.csv(priceDifferenceMinimal,"PriceDifference.csv", row.names = FALSE);
+
+cleanedDatacenters = read.csv("CleanedDatacenters.csv");
+
+#now that you have the .csv, you need to do these steps
+  #1. Add the price_difference data csv file to the cleanedDatacenters dataframe. This will probably be
+      #a full join. Make sure each row has a price_difference corresponding to the stateid.
+  #2. Make the scatterplot. You may need to save it to an image since RStudio's being weird about dispalying it.
+
+
+
+# create a scatterplot of city_mpg_ft1 versus engine_displacement colored by engine_cylinders
+#ggplot(data=cleanedDatacenters) + geom_point(aes(x=sqft, y=lat, color=lat));
 ```

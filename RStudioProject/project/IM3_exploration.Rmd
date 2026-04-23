@@ -145,6 +145,10 @@ IM3_atlas %>%
   group_by(state_abb) %>%
   summarize(total_sqft = sum(sqft)) %>%
   arrange(total_sqft)
+
+
+#saving to .csv so I can parse it in my script. -Patrick
+write.csv(IM3_atlas,"CleanedDatacenters.csv", row.names = FALSE);
 ```
 
 
