@@ -18,7 +18,7 @@ date: "2026-03-30"
 #all we need is period, stateid (filter out entries that are not "ALL"), price, sales, price-units, sales-units
 
 #parse each JSON, write data back as one .csv
-files = list.files(pattern = "\\.json$");
+files = list.files(path = "../data", pattern = "\\.json$", full.names = TRUE);
 files;
 
 library(jsonlite);
@@ -39,6 +39,11 @@ data = files %>%
   bind_rows();
 
 #data;
+
+print("Num rows: ");
+nrow(data);
+print("Num cols: ");
+ncol(data);
 
 #fix NAs, convert char of price to float
 relevantData = data %>% 
@@ -91,9 +96,9 @@ totalPriceDifference = priceDifferenceDataStart %>%
   mutate(price_difference = price - price_difference);
 
 priceDifferenceMinimal = totalPriceDifference %>% select(stateid, price_difference);
-write.csv(priceDifferenceMinimal,"PriceDifference.csv", row.names = FALSE);
+write.csv(priceDifferenceMinimal,"..\\data\\PriceDifference.csv", row.names = FALSE);
 
-cleanedDatacenters = read.csv("CleanedDatacenters.csv");
+cleanedDatacenters = read.csv("..\\data\\CleanedDatacenters.csv");
 cleanedDatacenters = cleanedDatacenters %>% rename(stateid = state_abb) %>% 
   filter((stateid != "DC") & (stateid != "US") & (stateid != "PR")); #Don't forget Puerto Rico
 cleanedDatacenters = cleanedDatacenters %>% full_join(priceDifferenceMinimal, by="stateid");
@@ -105,20 +110,21 @@ sqftStates = cleanedDatacenters %>%
     price_difference = first(price_difference),
   );
 
-write.csv(sqftStates,"SqftStates.csv", row.names = FALSE);
+write.csv(sqftStates,"..\\data\\SqftStates.csv", row.names = FALSE);
 
 ggplot(data=sqftStates) + geom_point(aes(x=total_sqft, y=price_difference, color=stateid))  +
   #this is an alternative to dividing each value by 1,000,000
   scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M")) + 
   scale_y_continuous(labels = label_number(accuracy=0.01)) + #2 decimals
+  guides(color = "none") +  #removed crappy legend
   labs(
     title = "Datacenter Square Footage vs Price Difference (JAN 2022 to DEC 2025)",
     x = "Total Square Footage (Millions)",
-    y = "Price Difference ($)"
+    y = "Price Difference (cents per kilowatt hour)"
   );
-ggsave("Sqft_vs_PriceDifference_Scatterplot.png", width = 8, height = 6, dpi = 300);
+ggsave("..\\data\\Sqft_vs_PriceDifference_Scatterplot.png", width = 8, height = 6, dpi = 300);
 
-
+print(mean(sqftStates$price_difference));
 
 #now that you have the .csv, you need to do these steps
   #1. Add the price_difference data csv file to the cleanedDatacenters dataframe. This will probably be
